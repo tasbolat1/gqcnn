@@ -56,6 +56,7 @@ catkin_python_setup()
    BoundingBox.msg
    Action.msg
    Observation.msg
+   Grasp.msg
  )
 
 ## Generate services in the 'srv' folder
