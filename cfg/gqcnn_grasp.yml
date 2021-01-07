@@ -1,4 +1,4 @@
-ggrasp:
+gqcnn:
   model: ggcnn_jacquard_smooth_0.5_iou_0.77
   camera:
     info_topic: /camera/depth/camera_info
