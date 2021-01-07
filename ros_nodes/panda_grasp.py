@@ -33,7 +33,7 @@ from tf import transformations as tft
 #from autolab_core import Point, Logger
 
 #from gqcnn.grasping import Grasp2D, SuctionPoint2D, GraspAction
-from gqcnn.msg import GQCNNGrasp
+#from gqcnn.msg import GQCNNGrasp
 #from gqcnn.srv import GQCNNGraspPlanner, GQCNNGraspPlannerSegmask
 #from perception import BinaryImage, CameraIntrinsics, ColorImage, DepthImage
 
@@ -72,7 +72,7 @@ class PandaOpenLoopGraspController(object):
         )
         self.max_velo = 0.10
         self.curr_velo = Twist()
-        self.best_grasp = GQCNNGrasp()
+        self.best_grasp = None#GQCNNGrasp()
 
         self.cs = ControlSwitcher(
             {
@@ -93,10 +93,10 @@ class PandaOpenLoopGraspController(object):
             queue_size=1,
         )
 
-        self.grasper = rospy.Publisher('~grasp_input', String, queue_size=1)
+        self.grasper = rospy.Publisher('/gqcnn/grasp_input', String, queue_size=1)
 
     def calculate_grasp(self):
-    	self.grasper.publish('calculate_grasp')
+    	self.grasper.publish( 'calculate_grasp')
 
     def __recover_robot_from_error(self):
         rospy.logerr("Recovering")
@@ -124,7 +124,7 @@ class PandaOpenLoopGraspController(object):
 
         print('Prepare planning')
         self.calculate_grasp()
-        self.best_grasp = rospy.wait_for_message("~grasp_output", GQCNNGrasp)
+        self.best_grasp = rospy.wait_for_message("/gqcnn/grasp_output", PoseStamped)
         print('Received msg')
         ############# TODO  #############################
         #self.best_grasp = correct_grasp(self.best_grasp, self.gripper)
@@ -145,7 +145,9 @@ class PandaOpenLoopGraspController(object):
         self.pc.goto_pose(self.best_grasp.pose, velocity=0.1)
 
         # Reset the position
+        offset = 0.05
         self.best_grasp.pose.position.z -= offset
+
 
         self.cs.switch_controller("velocity")
         v = Twist()
