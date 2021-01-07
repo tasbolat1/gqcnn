@@ -19,7 +19,7 @@ from dougsm_helpers.timeit import TimeIt
 from autolab_core import Point, Logger
 
 from gqcnn.grasping import Grasp2D, SuctionPoint2D, GraspAction
-from gqcnn.msg import GQCNNGrasp
+from gqcnn.msg import GQCNNGrasp, Grasp
 from gqcnn.srv import GQCNNGraspPlanner, GQCNNGraspPlannerSegmask
 from perception import BinaryImage, CameraIntrinsics, ColorImage, DepthImage
 
@@ -76,7 +76,7 @@ class GqCNNRt:
         self.get_grasp = False
 
 
-        self.grasp_publisher = rospy.Publisher('~grasp_output', PoseStamped, queue_size=10)
+        self.grasp_publisher = rospy.Publisher('~grasp_output', Grasp, queue_size=10)
         rospy.Subscriber('~grasp_input', String, self.command_callback)
 
     def command_callback(self, msg):
@@ -183,21 +183,18 @@ class GqCNNRt:
         pose_stamped.header = header
         self.grasp_publisher.publish(pose_stamped)
 
-    def publish_pos(self, point, orientation):
-        pose_stamped = PoseStamped()
+    def publish_pos(self, point, orientation, width, q):
+        g = Grasp()
 
-        pose_stamped.pose.position.x = point[0]
-        pose_stamped.pose.position.y = point[1]
-        pose_stamped.pose.position.z = point[2]
-        pose_stamped.pose.orientation = orientation
+        g.pose.position.x = point[0]
+        g.pose.position.y = point[1]
+        g.pose.position.z = point[2]
+        g.pose.orientation = orientation
+        g.width = width
+        g.quality = q 
 
-        # Use simpler method for getting pose
-        #pose = np.linalg.inv(cam_K)*np.array([gqcnn_grasp.center_px[0], gqcnn_grasp.center_px[1], 1.0]) + np.array([cam_p.x, cam_p.y, cam_p.z])
-        header = Header()
-        header.stamp = rospy.Time.now()
-        header.frame_id = self.camera_frame
-        pose_stamped.header = header
-        self.grasp_publisher.publish(pose_stamped)
+
+        self.grasp_publisher.publish(g)
 
 
     def run(self):
@@ -252,7 +249,7 @@ class GqCNNRt:
                 angle_quat = tfh.list_to_quaternion(tft.quaternion_from_euler(np.pi, 0, ((angle%np.pi) - np.pi/2)))
                 print('Angular quaternion', angle_quat)
                 print('Angle(radian): ', angle)
-                self.publish_pos(point_3d, angle_quat)
+                self.publish_pos(point_3d, angle_quat, best_grasp.width, best_action.q_value)
                 self.draw_prediction(best_grasp, best_action, best_depth)
                 
 
