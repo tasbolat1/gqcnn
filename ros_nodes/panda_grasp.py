@@ -28,7 +28,7 @@ import cv2
 #from std_msgs.msg import Stringgrasp
 
 from tf import transformations as tft
-from dougsm_helpers.timeit import TimeIt
+#from dougsm_helpers.timeit import TimeIt
 
 #from autolab_core import Point, Logger
 
@@ -40,7 +40,7 @@ from gqcnn.msg import GQCNNGrasp
 #from sensor_msgs.msg import Image, CameraInfo
 #from visualization import Visualizer2D as vis
 from geometry_msgs.msg import PoseStamped, Twist
-#from std_msgs.msg import Header
+from std_msgs.msg import String
 from franka_msgs.msg import FrankaState, Errors as FrankaErrors
 
 
@@ -122,9 +122,10 @@ class PandaOpenLoopGraspController(object):
     def __execute_best_grasp(self):
         self.cs.switch_controller("moveit")
 
+        print('Prepare planning')
         self.calculate_grasp()
         self.best_grasp = rospy.wait_for_message("~grasp_output", GQCNNGrasp)
-
+        print('Received msg')
         ############# TODO  #############################
         #self.best_grasp = correct_grasp(self.best_grasp, self.gripper)
 

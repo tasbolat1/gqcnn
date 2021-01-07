@@ -1,2 +1,7 @@
 /data/*
 /models/*
+**/*.pyc
+**/*/.venv/
+**/*/*.egg-info/
+**/*/.pyc
+**/*/build/
