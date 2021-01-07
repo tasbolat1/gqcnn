@@ -3,7 +3,7 @@
   <arg name="yaml_path" default="$(optenv YAML_PATH)"/>
   <arg name="gripper" default="panda"/>
   <rosparam command="load" file="$(find gqcnn)/cfg/info.yaml" />
-  <rosparam if="$(eval arg('gripper') == 'panda')" command="load" file="$(find ggrasp)/cfg/gqcnn_grasp.yml.yml" />
-  <!-- <rosparam if="$(eval arg('gripper') == 'robotiq')" command="load" file="$(find ggrasp)/cfg/ggrasp_robotiq.yml" /> -->
+  <rosparam if="$(eval arg('gripper') == 'panda')" command="load" file="$(find gqcnn)/cfg/gqcnn_grasp.yml" />
+  <rosparam if="$(eval arg('gripper') == 'robotiq')" command="load" file="$(find gqcnn)/cfg/ggrasp_robotiq.yml" />
   <node name="gqcnn" pkg="gqcnn" type="gqcnn_rt.py" output="screen"/>
 </launch>
