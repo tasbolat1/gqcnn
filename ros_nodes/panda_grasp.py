@@ -41,6 +41,7 @@ from tf import transformations as tft
 #from visualization import Visualizer2D as vis
 from geometry_msgs.msg import PoseStamped, Twist
 from std_msgs.msg import String
+from gqcnn.msg import Grasp
 from franka_msgs.msg import FrankaState, Errors as FrankaErrors
 
 
@@ -124,7 +125,7 @@ class PandaOpenLoopGraspController(object):
 
         print('Prepare planning')
         self.calculate_grasp()
-        self.best_grasp = rospy.wait_for_message("/gqcnn/grasp_output", PoseStamped)
+        self.best_grasp = rospy.wait_for_message("/gqcnn/grasp_output", Grasp)
         print('Received msg')
         ############# TODO  #############################
         #self.best_grasp = correct_grasp(self.best_grasp, self.gripper)
@@ -142,6 +143,7 @@ class PandaOpenLoopGraspController(object):
         #self.pc.gripper.set_gripper(self.best_grasp.width , wait=False)
 
         rospy.sleep(0.1)
+        print(self.best_grasp)
         self.pc.goto_pose(self.best_grasp.pose, velocity=0.1)
 
         # Reset the position
