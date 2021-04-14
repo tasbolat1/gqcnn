@@ -2,16 +2,16 @@ import numpy as np
 import cv2
 
 
-img = cv2.imread("images/depth.png",cv2.CV_16UC1)
+img = cv2.imread("collect/left001.jpg",cv2.CV_16UC1)
 # scale factor (realsense can detect up till 10m, but the rest 3m max)
 SCALE_FACTOR = 1.0
-img = img*SCALE_FACTOR
+print(img.shape)
 
-#img = img/65535.0
-img = img/1000.0
 # add one dimension at the end
-img = np.expand_dims(img, axis = -1)
+#img = np.expand_dims(img, axis = -1)
+cv2.imshow('asd',img)
+cv2.waitKey(0)
 
-with open('./images/depth.npy', 'wb') as f:
-    np.save(f, img)
+#with open('./images/depth.npy', 'wb') as f:
+#    np.save(f, img)
 

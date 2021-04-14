@@ -207,6 +207,26 @@ if __name__ == "__main__":
     else:
         segmask = segmask.mask_binary(valid_px_mask)
 
+    # We generate a segmask ourselves.
+    b = np.load('/home/clearlab/catkin_ws/src/gqcnn/examples/collect/table_1.npy')
+    c = np.load('/home/clearlab/catkin_ws/src/gqcnn/examples/collect/table_2.npy')
+
+    # basically all points lower than 1cm of table surface is filtered
+    table_avg = 0.5*(b+c)
+    segmask = table_avg - depth_data
+    segmask[segmask > 0.015] = 255
+    segmask[segmask != 255] = 0
+    segmask = segmask.astype('uint8')
+    segmask = BinaryImage(data = segmask)
+
+    # visualisation of segmask
+    # vis.figure(size = (10,10))
+    # vis.subplot(1,2,1)
+    # vis.imshow(depth_im)
+    # vis.subplot(1,2,2)
+    # vis.imshow(segmask)
+    # vis.show()
+
     # Inpaint.
     depth_im = depth_im.inpaint(rescale_factor=inpaint_rescale_factor)
 
@@ -264,11 +284,16 @@ if __name__ == "__main__":
     # Vis final grasp.
     if policy_config["vis"]["final_grasp"]:
         vis.figure(size=(10, 10))
-        vis.imshow(rgbd_im.depth) # vmin, vmax removed for our code.
+        vis.imshow(rgbd_im.depth,
+                    vmin = 0.0, vmax = 0.5) # vmin, vmax removed for our code.
         #vis.imshow(rgbd_im.depth,
         #           vmin=policy_config["vis"]["vmin"],
         #           vmax=policy_config["vis"]["vmax"])
         vis.grasp(action.grasp, scale=2.5, show_center=False, show_axis=True)
         vis.title("Planned grasp at depth {0:.3f}m with Q={1:.3f}".format(
             action.grasp.depth, action.q_value))
-        vis.show()
+        # vis.show()
+
+
+        name = depth_im_filename.split('/')[-1].replace('.npy', '')
+        vis.savefig('./examples/eg_grasp_image/{}.png'.format(name))

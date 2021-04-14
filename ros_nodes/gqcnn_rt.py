@@ -51,14 +51,6 @@ class GqCNNRt:
         self.base_frame = rospy.get_param('~camera/robot_base_frame')
         self.camera_frame = rospy.get_param('~camera/camera_frame')
         self.cam_fov = rospy.get_param('~camera/fov')
-
-        #self.counter = 0
-        self.curr_depth_img = None
-        self.curr_img_time = 0
-        #self.last_image_pose = None
-        #self.prev_mp = None
-        #rospy.Subscriber(rospy.get_param('~camera/depth_topic'), Image, self._depth_img_callback, queue_size=1)
-        
         # For getting camera pose
         camera_pose = tfh.current_robot_pose(self.base_frame, self.camera_frame)
         self.camera_rot = tft.quaternion_matrix(tfh.quaternion_to_list(camera_pose.orientation))[0:3, 0:3]
@@ -91,6 +83,7 @@ class GqCNNRt:
     def go(self):
         depth_raw = rospy.wait_for_message(rospy.get_param('~camera/depth_topic'), Image)
         depth = bridge.imgmsg_to_cv2(depth_raw)
+        depth = DepthImage(depth, frame=self.camera_frame)
 
         #self.imh, self.imw = depth.shape
         #self.depth = depth
@@ -148,40 +141,40 @@ class GqCNNRt:
         vis.title("Planned grasp on depth %.3f (Q=%.3f)" % (grasp.depth, action.q_value))
         vis.show()
 
-    def publish_grasp(self, grasp):
-        # Create `GQCNNGrasp` return msg and populate it.
-        gqcnn_grasp = GQCNNGrasp()
-        gqcnn_grasp.q_value = grasp.q_value
-        gqcnn_grasp.pose = grasp.grasp.pose().pose_msg
-        if isinstance(grasp.grasp, Grasp2D):
-            gqcnn_grasp.grasp_type = GQCNNGrasp.PARALLEL_JAW
-        elif isinstance(grasp.grasp, SuctionPoint2D):
-            gqcnn_grasp.grasp_type = GQCNNGrasp.SUCTION
-        else:
-            rospy.logerr("Grasp type not supported!")
-            raise rospy.ServiceException("Grasp type not supported!")
+    # def publish_grasp(self, grasp):
+    #     # Create `GQCNNGrasp` return msg and populate it.
+    #     gqcnn_grasp = GQCNNGrasp()
+    #     gqcnn_grasp.q_value = grasp.q_value
+    #     gqcnn_grasp.pose = grasp.grasp.pose().pose_msg
+    #     if isinstance(grasp.grasp, Grasp2D):
+    #         gqcnn_grasp.grasp_type = GQCNNGrasp.PARALLEL_JAW
+    #     elif isinstance(grasp.grasp, SuctionPoint2D):
+    #         gqcnn_grasp.grasp_type = GQCNNGrasp.SUCTION
+    #     else:
+    #         rospy.logerr("Grasp type not supported!")
+    #         raise rospy.ServiceException("Grasp type not supported!")
 
-        # Store grasp representation in image space.
-        gqcnn_grasp.center_px[0] = grasp.grasp.center[0]
-        gqcnn_grasp.center_px[1] = grasp.grasp.center[1]
-        gqcnn_grasp.angle = grasp.grasp.angle
-        gqcnn_grasp.depth = grasp.grasp.depth
-        gqcnn_grasp.thumbnail = grasp.image.rosmsg
+    #     # Store grasp representation in image space.
+    #     gqcnn_grasp.center_px[0] = grasp.grasp.center[0]
+    #     gqcnn_grasp.center_px[1] = grasp.grasp.center[1]
+    #     gqcnn_grasp.angle = grasp.grasp.angle
+    #     gqcnn_grasp.depth = grasp.grasp.depth
+    #     gqcnn_grasp.thumbnail = grasp.image.rosmsg
 
-        # Create and publish the pose alone for easy visualization of grasp
-        # pose in Rviz.
-        pose_stamped = PoseStamped()
+    #     # Create and publish the pose alone for easy visualization of grasp
+    #     # pose in Rviz.
+    #     pose_stamped = PoseStamped()
 
-        # pose is taken from Grasp2D method. Returns pose in camera frame of reference(KIV)
-        pose_stamped.pose = grasp.grasp.pose().pose_msg
+    #     # pose is taken from Grasp2D method. Returns pose in camera frame of reference(KIV)
+    #     pose_stamped.pose = grasp.grasp.pose().pose_msg
 
-        # Use simpler method for getting pose
-        #pose = np.linalg.inv(cam_K)*np.array([gqcnn_grasp.center_px[0], gqcnn_grasp.center_px[1], 1.0]) + np.array([cam_p.x, cam_p.y, cam_p.z])
-        header = Header()
-        header.stamp = rospy.Time.now()
-        header.frame_id = self.camera_frame
-        pose_stamped.header = header
-        self.grasp_publisher.publish(pose_stamped)
+    #     # Use simpler method for getting pose
+    #     #pose = np.linalg.inv(cam_K)*np.array([gqcnn_grasp.center_px[0], gqcnn_grasp.center_px[1], 1.0]) + np.array([cam_p.x, cam_p.y, cam_p.z])
+    #     header = Header()
+    #     header.stamp = rospy.Time.now()
+    #     header.frame_id = self.camera_frame
+    #     pose_stamped.header = header
+    #     self.grasp_publisher.publish(pose_stamped)
 
     def publish_pos(self, point, orientation, width, q):
         g = Grasp()
@@ -226,30 +219,45 @@ class GqCNNRt:
                 print('Grasp depth: ', best_grasp.depth)
                 
 
+                # recalculate camera pose
+                self.camera_frame = rospy.get_param('~camera/camera_frame')
+                # For getting camera pose
+                camera_pose = tfh.current_robot_pose(self.base_frame, self.camera_frame)
+                self.camera_rot = tft.quaternion_matrix(tfh.quaternion_to_list(camera_pose.orientation))[0:3, 0:3]
+                self.cam_p = camera_pose.position
+
                 #imh, imw = self.imh, self.imw
 
                 #x = ((np.vstack((np.linspace(imw // 2, imw // 2, self.imw, np.float), )*best_depth.shape[0]) - self.cam_K[0, 2])/self.cam_K[0, 0] * best_depth).flatten()
-                #x = (best_grasp.center[0]- self.cam_K[0, 2]) / self.cam_K[0, 0]
-                #y = (best_grasp.center[1]- self.cam_K[1, 2]) / self.cam_K[1, 1]
                 #y = ((np.vstack((np.linspace(imh // 2, imh // 2, best_depth.shape[0], np.float), )*best_depth.shape[1]).T - self.cam_K[1,2])/self.cam_K[1, 1] * best_depth).flatten()
                 #pos = np.dot(self.camera_rot, np.stack((x, y, best_grasp.depth))).T + np.array([[self.cam_p.x, self.cam_p.y, self.cam_p.z]])
 
-                #print('x, y, pos:', x, y, pos)
-                point_3d = best_grasp.depth * np.linalg.inv(self.cam_K).dot(np.array([best_grasp.center[0],best_grasp.center[1],1.0]))
-                print('new point:', point_3d)
-                point_3d[0] += self.cam_p.x
-                point_3d[1] += self.cam_p.y
-                point_3d[2] -= self.cam_p.z
-                print('go to (x,y,z): ', point_3d[0], point_3d[1], point_3d[2])
+                #print('x, y, pos:', sx, y, pos)
+                #point_3d = best_grasp.depth * np.linalg.inv(self.cam_K).dot(np.array([best_grasp.center[0],best_grasp.center[1],1.0]))
+                x = (best_grasp.center[0]- self.cam_K[0, 2]) / self.cam_K[0, 0] * best_grasp.depth
+                y = (best_grasp.center[1]- self.cam_K[1, 2]) / self.cam_K[1, 1] * best_grasp.depth
+                point_3d = np.dot(self.camera_rot, np.stack((x,y,best_grasp.depth))).T + np.array([[self.cam_p.x, self.cam_p.y, self.cam_p.z]])
+                print('new point (before transform):', point_3d)
+                # print('camera_rot ', type(self.camera_rot), self.camera_rot.shape)
+                #point_3d = np.dot(self.camera_rot, point_3d)
+                print('new point (after trasnform):', point_3d)
+                print('camera pose', self.cam_p.x, self.cam_p.y,self.cam_p.z)
+                #point_3d[0] += self.cam_p.x
+                #point_3d[1] += self.cam_p.y
+                #point_3d[2] += self.cam_p.z
+                # print('go to (x,y,z): ', point_3d[0], point_3d[1], point_3d[2])
 
 
                 angle = best_grasp.angle
+                if angle < 0:
+                    angle += 2*np.pi
                 angle -= np.arcsin(self.camera_rot[0, 1])  # Correct for the rotation of the camera
                 angle = (angle + np.pi/2) % np.pi - np.pi/2  # Wrap [-np.pi/2, np.pi/2]
-                angle_quat = tfh.list_to_quaternion(tft.quaternion_from_euler(np.pi, 0, ((angle%np.pi) - np.pi/2)))
+                angle_quat = tfh.list_to_quaternion(tft.quaternion_from_euler(np.pi, 0, ((angle%np.pi)-np.pi/2)))
                 print('Angular quaternion', angle_quat)
                 print('Angle(radian): ', angle)
-                self.publish_pos(point_3d, angle_quat, best_grasp.width, best_action.q_value)
+                # change later
+                self.publish_pos(point_3d[0], angle_quat, best_grasp.width, best_action.q_value)
                 self.draw_prediction(best_grasp, best_action, best_depth)
                 
 

@@ -48,7 +48,7 @@ if __name__ == "__main__":
         "Sample antipodal grasps on a depth image from an RgbdSensor"))
     parser.add_argument("--config_filename",
                         type=str,
-                        default="cfg/examples/antipodal_grasp_sampling.yaml",
+                        default="cfg/gqcnn_cfg/examples/antipodal_grasp_sampling.yaml",
                         help="path to configuration file to use")
     args = parser.parse_args()
     config_filename = args.config_filename
